@@ -1,0 +1,209 @@
+%Repressilatornoiseinputcalculations
+ 
+%Deterministic ODE calculations
+ 
+a = 0; %starting point.
+b = 2000; %ending point.
+N = 20000000; %No. of intermediate points to calculate.
+dT = (b-a)/N; %Mesh size.
+steps = 1:N+1;
+time = ((steps-1)/N)*(b-a);
+ 
+%Determinstic model, used for sine fitting.
+ 
+%Parameters
+k1 = 1000000.0; %gene expression rate when repressor unbound: g
+k2 = 1.2; %dissocation constant: Kdiss/Alpha1
+k3 = 0.0299; %binding constant: Kass/Alpha0
+k4 = 0.1; %degredation constant: Kdeg/K 
+k5 = 1000000.0;
+k6 = 1.2;
+k7 = 0.0299;
+k8 = 0.1;
+k9 = 1000000.0;
+k10 = 1.2;
+k11 = 0.0299;
+k12 = 0.1;
+ 
+%Allocates memory space (and initialises it)
+Xdet = zeros(1,N+1);
+Ydet = zeros(1,N+1);
+Zdet = zeros(1,N+1);
+ 
+%Initial conditions
+Xdet(1) = 760.0; 
+Ydet(1) = 720.0;
+Zdet(1) = 740.0;
+ 
+for t=2:N+1 %intergration loop
+    f = k1*(k2/(k2 + (k3*(Zdet(t-1)^2)))) - (k4*Xdet(t-1)); %function for X
+    g = k5*(k6/(k6 + (k7*(Xdet(t-1)^2)))) - (k8*Ydet(t-1)); %function for Y
+    h = k9*(k10/(k10 +(k11*(Ydet(t-1)^2)))) - (k12*Zdet(t-1));%function for Z
+    Xdet(t) = Xdet(t-1) + f*dT; 
+    Ydet(t) = Ydet(t-1) + g*dT;
+    Zdet(t) = Zdet(t-1) + h*dT;
+end
+ 
+%Stochastic model
+k13 = 1000000.0; %gene expression rate when repressor unbound: g 
+k14 = 1.2; %dissocation constant: Kdiss/Alpha1
+k15 = 0.0299; %binding constant: Kass/Alpha0
+k16 = 0.1; %degredation constant: Kdeg
+k17 = 1000000.0;
+k18 = 1.2;
+k19 = 0.0299;
+k20 = 0.1;
+k21 = 1000000.0;
+k22 = 1.2;
+k23 = 0.0299;
+k24 = 0.1;
+k25 = 750.0; %Binding constant of R and X to form (RX)
+k26 = 1.0; %Dissociation constant of (RX)
+k27 = 1.0; %A constant known as alpha, used to alter the output of the SDE
+k28 = 0.005; %Diffusion coefficient of R
+ 
+%Allocates memory space (and initialises it)
+R = zeros(1,N+1);
+Xsde = zeros(1,N+1);
+Ysde = zeros(1,N+1);
+Zsde = zeros(1,N+1);
+ 
+%Initial conditions
+R(1) = 700.0;
+Xsde(1) = 760.0; 
+Ysde(1) = 720.0;
+Zsde(1) = 740.0;
+ 
+for t=2:N+1 %intergration loop
+    f = k13*(k14/(k14 + (k15*(Zsde(t-1)^2)))) - (k16*Xsde(t-1)); %function for X
+    g = k17*(k18/(k18 + (k19*(k25/k26)*(Xsde(t-1)*R(t-1))))) - (k20*Ysde(t-1)); %function for Y
+    h = k21*(k22/(k22 +(k23*(Ysde(t-1)^2)))) - (k24*Zsde(t-1));%function for Z
+    R(t) = R(t-1) + (((-((R(t-1))^2)) + (k27*R(t-1)))*dT) + ((sqrt(2*k28*dT))*R(t-1)*randn); %Function for R
+    Xsde(t) = Xsde(t-1) + f*dT; 
+    Ysde(t) = Ysde(t-1) + g*dT;
+    Zsde(t) = Zsde(t-1) + h*dT;
+    if t>N/10 
+        Rnew(t-N/10)=R(t);
+    end
+    
+end
+ 
+ 
+%Allocates memory space and initialises it
+Xnoise = zeros(1,N+1);
+Ynoise = zeros(1,N+1);
+Znoise = zeros(1,N+1);
+SinX = zeros(1,N+1);
+SinY = zeros(1,N+1);
+SinZ = zeros(1,N+1);
+ 
+%Sine fitting X, the Sine curve fits the determinstic model, with a
+%modified wavelength to match the average of the stochastic model's
+%wavelength
+t = 0: dT: b;
+SinX = 738.146158 + (23.111342*sin(((2*pi)/45.45)*(t+13.76)));
+ 
+%Calculating noise for X
+Xnoise = Xsde - SinX;
+ 
+%Sine fitting Y
+t = 0 : dT : b;
+SinY = 738.146158 + (23.111342*sin(((2*pi)/35)*(t+25.86)));
+ 
+%Calculating noise for Y
+Ynoise = Zsde - SinY;
+ 
+%Sin fitting Z
+t = 0: dT: b;
+SinZ = 738.146158 + (23.111342*sin(((2*pi)/45.45)*(t+37.96)));
+ 
+%Calculating noise for Z
+Znoise = Zsde - SinZ;
+ 
+%Plot of determinstic model
+figure
+plot(time(1,1000000:5000000),Xdet(1,1000000:2000000),'LineWidth',2)
+hold all
+plot(time(1,1000000:5000000),Ydet(1,1000000:2000000),'LineWidth',2)
+hold all
+plot(time(1,1000000:5000000),Zdet(1,1000000:2000000),'LineWidth',2)
+hold all
+title('Result of a deterministic model of a repressilator')
+xlabel('Time (arbitrary units)')
+ylabel('Concentration of repressor (arbitrary units)')
+legend({'Xdet','Ydet','Zdet'},'Location','southwest')
+ 
+%Plot of stochastic model
+figure
+plot(time(1,1000000:2000000),Xsde(1,1000000:5000000),'LineWidth',2)
+hold all
+plot(time(1,1000000:2000000),Ysde(1,1000000:5000000),'LineWidth',2)
+hold all
+plot(time(1,1000000:2000000),Zsde(1,1000000:5000000),'LineWidth',2)
+hold all
+title('Result of a stochastic model of a repressilator')
+xlabel('Time (arbitrary units)')
+ylabel('Concentration of repressor (arbitrary units)')
+legend({'Xsde','Ysde','Zsde'},'Location','southwest')
+ 
+%Plots for R
+figure
+plot(t(1,1000000:N),R(1,1000000:N),'LineWIdth',2)
+title('Concentration of a stochastic element R over time')
+xlabel('Time (arbitrary units)')
+ylabel('Concentration of R (arbitrary units)')
+hold all
+figure
+histogram(Rnew,'Binwidth',0.02)
+title('Histogram of the distribution of R')
+xlabel('Concentration of R (abitrary units)')
+ylabel('Frequency')
+hold all
+ 
+%Plots of noise
+figure
+plot(t(1,1000000:N),Xnoise(1,1000000:N),'LineWidth',2)
+title('Value of Xnoise over time')
+xlabel('Time (arbitrary units)')
+ylabel('Value of Xnoise (abitrary units')
+hold all
+figure
+plot(t(1,1000000:N),Ynoise(1,1000000:N),'LineWidth',2)
+title('Value of Ynoise over time')
+xlabel('Time (arbitrary units)')
+ylabel('Value of Ynoise (abitrary units')
+hold all
+figure
+plot(t(1,1000000:N),Znoise(1,1000000:N),'LineWidth',2)
+title('Value of Znoise over time')
+xlabel('Time (arbitrary units)')
+ylabel('Value of Znoise (abitrary units')
+hold all
+ 
+%Histograms
+figure
+histogram(Xnoise(1,1000000:N),'BinWidth',5)
+title('Histogram of the distribution of Xnoise')
+xlabel('Value of Xnoise (abitrary units)')
+ylabel('Frequency')
+hold all
+figure
+histogram(Ynoise(1,1000000:N),'BinWidth',5)
+title('Histogram of the distribution of Ynoise')
+xlabel('Value of Ynoise (abitrary units)')
+ylabel('Frequency')
+hold all
+figure
+histogram(Znoise(1,1000000:N),'BinWidth',5)
+title('Histogram of the distribution of Znoise')
+xlabel('Value of Znoise (abitrary units)')
+ylabel('Frequency')
+hold all
+ 
+%Value calculations
+RCV = (std(Rnew))/mean(Rnew)
+XnoiseCV = (std(Xnoise(1,1000000:N)))/mean(Xnoise(1,1000000:N))
+YnoiseCV = (std(Ynoise(1,1000000:N)))/mean(Ynoise(1,1000000:N))
+ZnoiseCV = (std(Znoise(1,1000000:N)))/mean(Znoise(1,1000000:N))
+
+
